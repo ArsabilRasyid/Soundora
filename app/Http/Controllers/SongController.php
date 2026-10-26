@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 
 class SongController extends Controller
 {
-    private const AUDIO = 'file|mimes:mp3,mpga,wav,ogg,m4a,aac,flac|max:30720';
+    // Validasi mimes & mimetypes lengkap agar file audio umum tidak tertolak
+    private const AUDIO = 'file|mimes:mp3,mpga,wav,ogg,m4a,aac,flac|mimetypes:audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/x-m4a,audio/aac,audio/flac,application/octet-stream|max:30720';
 
     public function index(Request $r)
     {
@@ -20,15 +21,17 @@ class SongController extends Controller
         $liked = $r->boolean('liked');
 
         $songs = Song::with(['artist', 'album'])
-            ->when($liked, fn ($s) => $s->where('is_liked', true))
-            ->when($q !== '', fn ($s) => $s->where(fn ($w) => $w
+            ->when($liked, fn($s) => $s->where('is_liked', true))
+            ->when($q !== '', fn($s) => $s->where(fn($w) => $w
                 ->where('title', 'like', "%$q%")
-                ->orWhereHas('artist', fn ($a) => $a->where('name', 'like', "%$q%"))
-                ->orWhereHas('album', fn ($a) => $a->where('name', 'like', "%$q%"))))
+                ->orWhereHas('artist', fn($a) => $a->where('name', 'like', "%$q%"))
+                ->orWhereHas('album', fn($a) => $a->where('name', 'like', "%$q%"))))
             ->latest()->get();
 
         return view('songs.index', [
-            'songs' => $songs, 'liked' => $liked, 'q' => $q,
+            'songs' => $songs,
+            'liked' => $liked,
+            'q' => $q,
             'playlists' => Playlist::orderBy('name')->get(),
         ]);
     }
@@ -104,7 +107,7 @@ class SongController extends Controller
     {
         $this->removeFile($song->audio_path);
         $this->removeFile($song->cover_path);
-        $song->delete(); // baris di playlist_song ikut terhapus (cascade)
+        $song->delete();
 
         return back()->with('ok', 'Lagu dihapus dari SOUNDORA.');
     }
@@ -124,7 +127,6 @@ class SongController extends Controller
         return [$artist, $album];
     }
 
-    // Hanya hapus file lokal; URL eksternal dibiarkan
     private function removeFile(?string $path): void
     {
         if ($path && ! Str::startsWith($path, ['http://', 'https://'])) {

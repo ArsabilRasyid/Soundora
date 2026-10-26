@@ -33,7 +33,11 @@ class Song extends Model
 
     public function getAudioUrlAttribute(): string
     {
-        return $this->isRemote() ? $this->audio_path : Storage::disk('public')->url($this->audio_path);
+        if (! $this->audio_path) return '';
+        if ($this->isRemote()) return $this->audio_path;
+
+        // Memastikan URL file audio lokal selalu valid diakses oleh browser
+        return asset('storage/' . ltrim($this->audio_path, '/'));
     }
 
     // Nilai CSS "background": gambar sampul (file lokal atau URL) dengan gradasi sebagai cadangan
@@ -45,7 +49,7 @@ class Song extends Model
     public static function coverCss(?string $path, int $id): string
     {
         if (! $path) return self::gradient($id);
-        $url = Str::startsWith($path, ['http://', 'https://']) ? $path : Storage::disk('public')->url($path);
+        $url = Str::startsWith($path, ['http://', 'https://']) ? $path : asset('storage/' . ltrim($path, '/'));
         return "url('$url') center/cover, " . self::gradient($id);
     }
 
